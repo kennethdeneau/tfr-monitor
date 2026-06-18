@@ -113,7 +113,7 @@ class TelegramNotifier(Notifier):
         try:
             async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.post(url, json=payload)
-            if not resp.ok:
+            if not resp.is_success:
                 logger.error(f"Telegram error {resp.status_code}: {resp.text[:200]}")
                 return False
             return True
@@ -330,7 +330,7 @@ class PushoverNotifier(Notifier):
         try:
             async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.post(PUSHOVER_API, data=payload)
-            if not resp.ok:
+            if not resp.is_success:
                 logger.error(f"Pushover error {resp.status_code}: {resp.text[:200]}")
                 return False
             return True

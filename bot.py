@@ -64,7 +64,7 @@ async def _send(text: str) -> None:
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(url, json=payload)
-        if not resp.ok:
+        if not resp.is_success:
             logger.warning(f"Bot reply failed: {resp.status_code} {resp.text[:80]}")
     except Exception as e:
         logger.warning(f"Bot reply error: {e}")
@@ -281,7 +281,7 @@ async def bot_listener(state: MonitorState, notifiers: list) -> None:
                     },
                 )
 
-            if not resp.ok:
+            if not resp.is_success:
                 logger.warning(f"getUpdates HTTP {resp.status_code} — retrying in 10s")
                 await asyncio.sleep(10)
                 continue

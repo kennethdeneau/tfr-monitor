@@ -13,8 +13,10 @@ Supported commands (from the authorized chat only):
   /help        — show command list
 """
 import asyncio
+import html as html_lib
 import logging
 import re
+import xml.etree.ElementTree as ET
 
 import httpx
 
@@ -85,9 +87,14 @@ async def _fetch_vips() -> tuple[list[dict] | None, str | None]:
         if resp.status_code != 200:
             return None, f"HTTP {resp.status_code}"
         body = resp.text.strip()
-        if not body.startswith("["):
-            return None, f"Feed returned non-JSON (first 80 chars: {body[:80]!r})"
-        data = resp.json()
+        if not body.startswith("<") or body.lower().startswith("<!doctype"):
+            return None, f"Feed returned non-XML (first 80 chars: {body[:80]!r})"
+        try:
+            root = ET.fromstring(body)
+        except ET.ParseError as e:
+            return None, f"XML parse error: {e}"
+        from poller import _parse_xml_tfrs
+        data = _parse_xml_tfrs(root)
         vips = [item for item in data if item.get("type") == "VIP"]
         return vips, None
     except Exception as e:
@@ -154,7 +161,7 @@ async def _cmd_fetch() -> None:
     await _send("⏳ Fetching FAA TFR feed…")
     vips, err = await _fetch_vips()
     if err:
-        await _send(f"❌ Fetch failed: {err}")
+        await _send(f"❌ Fetch failed: {html_lib.escape(err)}")
         return
     if not vips:
         await _send("ℹ️ Feed returned <b>0 VIP TFRs</b> right now.")
@@ -179,7 +186,7 @@ async def _cmd_test(notifiers: list) -> None:
     await _send("⏳ Fetching current VIPs and firing a test notification…")
     vips, err = await _fetch_vips()
     if err:
-        await _send(f"❌ Fetch failed: {err}")
+        await _send(f"❌ Fetch failed: {html_lib.escape(err)}")
         return
     if not vips:
         await _send("ℹ️ No VIP TFRs in the feed right now — nothing to test with.")

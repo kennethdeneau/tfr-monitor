@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # FAA TFR data source
-FAA_TFR_URL = "https://tfr.faa.gov/tfr3/export/json"
+FAA_TFR_URL = "https://tfr.faa.gov/tfr3/export/xml"
 FAA_TFR_LIST_URL = "https://tfr.faa.gov/tfr_map_ims/html/near_you.html"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 

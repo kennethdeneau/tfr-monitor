@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import xml.etree.ElementTree as ET
 from typing import Any
 
 import httpx
@@ -53,6 +54,32 @@ def _make_link(notam_id: str) -> str:
         safe = notam_id.replace("/", "_").replace(" ", "_")
         return f"https://tfr.faa.gov/save_pages/detail_{safe}.html"
     return config.FAA_TFR_LIST_URL
+
+
+def _parse_xml_tfrs(root: ET.Element) -> list[dict]:
+    """Convert the FAA XML feed into the same dict shape as the former JSON feed."""
+    tfrs = []
+    # The XML structure wraps entries in <TFRAreaGroup> or similar; handle both flat and nested
+    for item in root.iter():
+        notam_id = item.findtext("notam_id") or item.get("notam_id", "")
+        if not notam_id:
+            continue
+        tfrs.append({
+            "notam_id": notam_id,
+            "type": (item.findtext("type") or item.findtext("tfr_type") or "").upper(),
+            "facility": item.findtext("facility") or item.findtext("facilityName") or "",
+            "state": item.findtext("state") or item.findtext("stateAbbrev") or "",
+            "description": item.findtext("description") or item.findtext("notamText") or "",
+            "creation_date": item.findtext("creation_date") or item.findtext("creationDate") or "",
+        })
+    # Deduplicate by notam_id (iter may visit nested nodes multiple times)
+    seen: set[str] = set()
+    unique = []
+    for t in tfrs:
+        if t["notam_id"] not in seen:
+            seen.add(t["notam_id"])
+            unique.append(t)
+    return unique
 
 
 def _diff_fields(old: dict, new: dict) -> dict[str, tuple[Any, Any]]:
@@ -106,23 +133,22 @@ async def _fetch_raw() -> Any:
             logger.warning(f"FAA TFR feed: HTTP {resp.status_code}")
             return _FAILED
 
-        # The endpoint sometimes returns an HTML app-shell ("Loading...") instead
-        # of JSON. Detect this and retry next poll without treating it as a data error.
+        # The endpoint sometimes returns an HTML app-shell instead of data.
         body = resp.text.strip()
-        if not body.startswith("["):
+        if not body.startswith("<") or body.lower().startswith("<!doctype"):
             logger.warning(
-                f"FAA TFR feed returned non-JSON body (first 80 chars): {body[:80]!r} "
+                f"FAA TFR feed returned non-XML body (first 80 chars): {body[:80]!r} "
                 f"— will retry next poll"
             )
             return _FAILED
 
-        data = resp.json()
-        if not isinstance(data, list):
-            logger.warning(f"FAA TFR feed: expected list, got {type(data).__name__}")
+        try:
+            root = ET.fromstring(body)
+        except ET.ParseError as e:
+            logger.warning(f"FAA TFR feed: XML parse error: {e}")
             return _FAILED
 
         # Persist ETag / Last-Modified for conditional requests next cycle.
-        # If the endpoint never returns a 304, these values just sit unused.
         new_etag = resp.headers.get("ETag", "")
         new_lm = resp.headers.get("Last-Modified", "")
         if new_etag:
@@ -130,6 +156,8 @@ async def _fetch_raw() -> Any:
         if new_lm:
             await set_state("last_modified", new_lm)
 
+        # Parse TFR entries from XML — fields match what the JSON feed provides
+        data = _parse_xml_tfrs(root)
         vips = [item for item in data if item.get("type") == "VIP"]
         logger.info(f"FAA TFR: {len(data)} total TFRs, {len(vips)} VIP")
         return vips

@@ -6,7 +6,7 @@ load_dotenv()
 # FAA TFR data source
 FAA_TFR_URL = "https://tfr.faa.gov/tfr3/export/json"
 FAA_TFR_LIST_URL = "https://tfr.faa.gov/tfr_map_ims/html/near_you.html"
-USER_AGENT = "AugurIntel-TFRMonitor/1.0 (automated monitoring; contact ken.deneau@propher.co)"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
 # Polling intervals
 POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "60"))

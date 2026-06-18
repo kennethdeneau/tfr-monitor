@@ -105,3 +105,15 @@ async def mark_tfr_expired(notam_id: str) -> None:
             (notam_id,),
         )
         await db.commit()
+
+
+async def clear_tfr_state() -> int:
+    """Wipe all TFR entries and the baseline flag. Returns count of deleted rows."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COUNT(*) FROM tfr_entries") as cur:
+            row = await cur.fetchone()
+        count = row[0] if row else 0
+        await db.execute("DELETE FROM tfr_entries")
+        await db.execute("DELETE FROM app_state WHERE key = 'baseline_seeded'")
+        await db.commit()
+    return count

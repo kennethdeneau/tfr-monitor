@@ -33,7 +33,7 @@ async def main() -> None:
     # Run poll loop and Telegram bot listener concurrently
     await asyncio.gather(
         poll_loop(notifiers, state),
-        bot_listener(state),
+        bot_listener(state, notifiers),
     )
 
 

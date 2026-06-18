@@ -78,7 +78,10 @@ async def _fetch_raw() -> Any:
       _FAILED     — unrecoverable error this cycle (will be retried next poll)
     """
     headers = {
-        "Accept": "application/json",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://tfr.faa.gov/tfr_map_ims/html/near_you.html",
         "User-Agent": config.USER_AGENT,
     }
 

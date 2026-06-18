@@ -226,9 +226,10 @@ async def _process(vips: list[dict], notifiers: list) -> None:
 # Main poll loop
 # ---------------------------------------------------------------------------
 
-async def poll_loop(notifiers: list) -> None:
+async def poll_loop(notifiers: list, state) -> None:
     """
     Persistent polling loop. Never exits except on process kill.
+    Reads state.poll_interval each cycle so Telegram bot commands take effect immediately.
 
     Backoff strategy on repeated failures:
       failure 1 → 1× interval
@@ -239,13 +240,10 @@ async def poll_loop(notifiers: list) -> None:
     consecutive_failures = 0
     degraded_alert_sent = False
 
-    logger.info(
-        f"Poll loop started — interval={config.POLL_INTERVAL_SECONDS}s "
-        f"watch_mode={'ON (' + str(config.WATCH_INTERVAL_SECONDS) + 's)' if config.WATCH_MODE else 'off'}"
-    )
+    logger.info(f"Poll loop started — interval={state.poll_interval}s")
 
     while True:
-        interval = config.WATCH_INTERVAL_SECONDS if config.WATCH_MODE else config.POLL_INTERVAL_SECONDS
+        interval = state.poll_interval
 
         try:
             result = await _fetch_raw()

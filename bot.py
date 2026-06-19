@@ -75,9 +75,8 @@ async def _send(text: str) -> None:
 async def _fetch_vips() -> tuple[list[dict] | None, str | None]:
     """Fetch current VIP TFRs directly. Returns (vips, error_msg)."""
     headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "text/xml,application/xml,*/*",
         "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
         "Referer": "https://tfr.faa.gov/tfr_map_ims/html/near_you.html",
         "User-Agent": config.USER_AGENT,
     }
